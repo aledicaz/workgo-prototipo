@@ -1,0 +1,602 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Work-GO Prototipo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&family=Ubuntu+Mono:wght@400;700&display=swap">
+<style>
+/* Layout: guía de escenarios a la izquierda, dispositivo al centro; en móvil se apilan. La app vive dentro del teléfono con su propia paleta fija (azul Work + amarillo Go). */
+:root{
+  --bg:#EEF2F7; --panel:#FFFFFF; --ink:#16263A; --muted:#5B6B80; --line:#D6DEE8;
+  --brand:#155A97; --brand-ink:#FFFFFF; --go:#F5B301; --soft:#E3ECF6;
+  --font:"Ubuntu", "Segoe UI", system-ui, sans-serif; --mono:"Ubuntu Mono", ui-monospace, monospace;
+  /* paleta fija de la app (pantalla del teléfono) */
+  --a-bg:#FFFFFF; --a-ink:#14202E; --a-mut:#6A7889; --a-line:#E3E8EF; --a-soft:#F2F5F9;
+  --a-blue:#155A97; --a-blue2:#0E4677; --a-sky:#E4EEF8; --a-go:#F5B301; --a-go-soft:#FFF4D6;
+  --a-ok:#22955A; --a-ok-soft:#E3F4EA; --a-red:#C8372D; --a-red-soft:#FBE7E5;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0F1722; --panel:#172231; --ink:#E6EDF6; --muted:#9AAABD; --line:#2A3A4F; --brand:#5EA2E0; --brand-ink:#0B1420; --soft:#1E2D40; color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0F1722; --panel:#172231; --ink:#E6EDF6; --muted:#9AAABD; --line:#2A3A4F; --brand:#5EA2E0; --brand-ink:#0B1420; --soft:#1E2D40; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);margin:0;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
+button{font-family:inherit;cursor:pointer}
+button:focus-visible,[tabindex]:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid var(--go);outline-offset:2px}
+.top{max-width:1240px;margin:0 auto 18px;display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px;justify-content:space-between}
+.logo{font-weight:700;font-size:26px;letter-spacing:-.5px}
+.logo b{color:var(--brand)} .logo i{font-style:normal;color:var(--go)}
+.top p{margin:2px 0 0;color:var(--muted);font-size:14px}
+.tabs{display:flex;flex-wrap:wrap;gap:6px}
+.tabs button{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:8px 14px;font-size:14px}
+.tabs button[aria-pressed="true"]{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
+.stage{max-width:1240px;margin:0 auto;display:grid;grid-template-columns:330px 1fr;gap:28px;align-items:start}
+.guide{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;position:sticky;top:max(16px,env(safe-area-inset-top,0px))}
+.guide .role{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.guide h2{margin:4px 0 6px;font-size:20px;text-wrap:balance}
+.guide .sc{margin:0 0 14px;color:var(--muted);font-size:14px;line-height:1.45}
+.steps{list-style:none;margin:0;padding:0;display:grid;gap:4px;counter-reset:s}
+.steps li button{width:100%;text-align:left;display:grid;grid-template-columns:26px 1fr;gap:8px;align-items:start;background:none;border:0;color:var(--ink);padding:7px 6px;border-radius:10px;font-size:14px;line-height:1.35}
+.steps li button:hover{background:var(--soft)}
+.steps .n{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;border:1.5px solid var(--line);color:var(--muted)}
+.steps li.done .n{background:var(--soft);border-color:var(--soft);color:var(--brand)}
+.steps li.cur button{background:var(--soft)}
+.steps li.cur .n{background:var(--go);border-color:var(--go);color:#1d1600}
+.feat{margin-top:14px;padding-top:12px;border-top:1px solid var(--line);font-size:13px;color:var(--muted);line-height:1.45}
+.feat b{color:var(--ink);font-weight:500}
+.gbtns{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+.gbtns button{border:1px solid var(--line);background:none;color:var(--ink);border-radius:10px;padding:7px 12px;font-size:13px}
+.gbtns label{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
+.dev{display:flex;justify-content:center;min-width:0}
+/* teléfono */
+.phone{width:390px;max-width:100%;height:800px;background:#0C0F14;border-radius:54px;padding:12px;box-shadow:0 30px 60px -30px rgba(10,30,60,.45),0 0 0 2px #2b3038 inset;position:relative}
+.phone:before{content:"";position:absolute;top:22px;left:50%;transform:translateX(-50%);width:110px;height:30px;background:#0C0F14;border-radius:20px;z-index:5}
+.screen{background:var(--a-bg);color:var(--a-ink);border-radius:42px;height:100%;overflow:hidden;position:relative;display:flex;flex-direction:column}
+.status{height:50px;flex:none;display:flex;justify-content:space-between;align-items:flex-end;padding:0 30px 6px;font-weight:700;font-size:15px}
+.status .sig{display:flex;gap:5px;align-items:center}
+.appbar{flex:none;display:flex;align-items:center;justify-content:center;height:40px;position:relative}
+.appbar .wm{font-weight:700;font-size:20px;color:var(--a-blue)} .appbar .wm i{font-style:normal;color:var(--a-go)}
+.appbar .back{position:absolute;left:14px;border:0;background:var(--a-soft);width:34px;height:34px;border-radius:50%;display:grid;place-items:center;color:var(--a-ink)}
+.appbar .bell{position:absolute;right:16px;border:0;background:none;color:var(--a-ink)}
+.body{flex:1;overflow-y:auto;padding:6px 18px 18px;scrollbar-width:none}
+.body::-webkit-scrollbar{display:none}
+.nav{flex:none;display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--a-line);padding:8px 10px 22px;background:var(--a-bg)}
+.nav button{border:0;background:none;display:grid;justify-items:center;gap:2px;font-size:12px;color:#A9B6C6}
+.nav button.on{color:var(--a-blue);font-weight:700}
+/* piezas de la app */
+.h1{font-size:28px;font-weight:700;margin:6px 0 12px;letter-spacing:-.4px;text-wrap:balance}
+.h2{font-size:19px;font-weight:700;margin:18px 0 10px}
+.sub{color:var(--a-mut);font-size:14px;line-height:1.4;margin:-4px 0 14px}
+.search{display:flex;align-items:center;gap:10px;background:var(--a-soft);border-radius:999px;padding:12px 16px;color:var(--a-mut);font-size:15px}
+.urg{margin-top:14px;border-radius:20px;background:var(--a-blue);color:#fff;padding:16px;display:grid;grid-template-columns:1fr auto;gap:6px 12px;align-items:center;border:0;text-align:left;width:100%}
+.urg b{font-size:17px} .urg span{font-size:13px;opacity:.85;line-height:1.35}
+.urg .bolt{grid-row:1/3;grid-column:2;width:48px;height:48px;border-radius:50%;background:var(--a-go);display:grid;place-items:center;color:#2a1d00}
+.cats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px 8px}
+.cat{border:0;background:none;display:grid;justify-items:center;gap:6px;font-size:13px;font-weight:500;color:var(--a-blue)}
+.cat .ic{width:66px;height:66px;border-radius:50%;background:var(--a-blue);display:grid;place-items:center;color:#fff}
+.ad{margin-top:16px;border:1px dashed #D9C27A;background:var(--a-go-soft);border-radius:16px;padding:12px 14px;font-size:13px;display:flex;gap:10px;align-items:center}
+.ad .tag{font-size:10px;text-transform:uppercase;letter-spacing:.08em;background:#fff;border-radius:6px;padding:2px 6px;color:#7a6200;font-weight:700;flex:none}
+.card{border:1px solid var(--a-line);border-radius:18px;padding:14px;background:#fff}
+.row{display:flex;gap:12px;align-items:center}
+.col{display:grid;gap:10px}
+.av{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;font-weight:700;color:#fff;flex:none;position:relative;font-size:18px}
+.av.lg{width:84px;height:84px;font-size:28px}
+.av .dot{position:absolute;right:1px;bottom:1px;width:14px;height:14px;border-radius:50%;background:var(--a-ok);border:2px solid #fff}
+.nm{font-weight:700;font-size:16px} .rl{color:var(--a-mut);font-size:13px}
+.stars{display:inline-flex;gap:1px;color:var(--a-go);vertical-align:-2px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--a-line);background:#fff;border-radius:999px;padding:6px 11px;font-size:12px;color:var(--a-ink)}
+.chip.on{background:var(--a-sky);border-color:#B9D2EA;color:var(--a-blue2);font-weight:500}
+.ver{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;color:var(--a-ok);background:var(--a-ok-soft);border-radius:999px;padding:3px 8px}
+.meta{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;color:var(--a-mut);margin-top:6px}
+.price{font-weight:700;color:var(--a-blue2)}
+.btn{width:100%;border:0;border-radius:16px;padding:15px;font-size:16px;font-weight:700;background:var(--a-blue);color:#fff;display:flex;gap:8px;align-items:center;justify-content:center}
+.btn.go{background:var(--a-go);color:#241a00}
+.btn.ghost{background:var(--a-soft);color:var(--a-ink)}
+.btn.red{background:var(--a-red-soft);color:var(--a-red)}
+.btn.sm{padding:10px 12px;font-size:14px;border-radius:12px;width:auto}
+.btns{display:grid;gap:10px;margin-top:16px}
+.btns.two{grid-template-columns:1fr 1fr}
+.lbl{font-size:13px;font-weight:700;margin:14px 0 6px;display:block}
+.inp{width:100%;border:1px solid var(--a-line);border-radius:14px;padding:12px;font:inherit;font-size:14px;color:var(--a-ink);background:#fff;resize:none}
+.seg{display:grid;grid-template-columns:1fr 1fr;background:var(--a-soft);border-radius:14px;padding:4px;gap:4px}
+.seg button{border:0;background:none;border-radius:11px;padding:10px 6px;font-size:13px;color:var(--a-mut)}
+.seg button.on{background:#fff;color:var(--a-blue2);font-weight:700;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.tog{display:flex;justify-content:space-between;align-items:center;gap:12px;border:1px solid var(--a-line);border-radius:14px;padding:12px;margin-top:10px;width:100%;background:#fff;text-align:left;color:var(--a-ink)}
+.tog .sw{width:46px;height:28px;border-radius:999px;background:#CBD5E1;position:relative;flex:none;transition:background .2s}
+.tog .sw:after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:left .2s}
+.tog.on .sw{background:var(--a-go)} .tog.on .sw:after{left:21px}
+.tog small{display:block;color:var(--a-mut);font-size:12px;margin-top:2px;line-height:1.35}
+.note{font-size:12px;color:var(--a-mut);line-height:1.4;display:flex;gap:6px;align-items:flex-start;margin-top:10px}
+.warn{background:var(--a-go-soft);border-radius:12px;padding:10px 12px;font-size:13px;line-height:1.4;margin-top:10px;color:#4d3a00}
+.okbox{background:var(--a-ok-soft);border-radius:12px;padding:10px 12px;font-size:13px;line-height:1.4;color:#14532f}
+.thumb{width:64px;height:64px;border-radius:12px;flex:none;display:grid;place-items:center;color:#fff}
+.tl{list-style:none;margin:0;padding:0;display:grid;gap:0}
+.tl li{display:grid;grid-template-columns:22px 1fr;gap:10px;position:relative;padding-bottom:14px}
+.tl li:before{content:"";position:absolute;left:10px;top:20px;bottom:0;width:2px;background:var(--a-line)}
+.tl li:last-child:before{display:none}
+.tl .b{width:22px;height:22px;border-radius:50%;border:2px solid var(--a-line);background:#fff;display:grid;place-items:center;color:#fff}
+.tl li.ok .b{background:var(--a-ok);border-color:var(--a-ok)}
+.tl li.now .b{background:var(--a-go);border-color:var(--a-go)}
+.tl .t{font-size:14px;font-weight:500} .tl .d{font-size:12px;color:var(--a-mut)}
+.code{display:flex;gap:8px;justify-content:center;margin:8px 0}
+.code span{width:52px;height:64px;border-radius:16px;border:2px solid var(--a-blue);display:grid;place-items:center;font-size:30px;font-weight:700;font-family:var(--mono);color:var(--a-blue2);background:var(--a-sky)}
+.code input{width:52px;height:64px;border-radius:16px;border:1.5px solid #B8C3D1;text-align:center;font-size:28px;font-family:var(--mono);color:var(--a-ink)}
+.ln{display:flex;justify-content:space-between;gap:10px;font-size:14px;padding:7px 0;border-bottom:1px solid var(--a-line)}
+.ln:last-child{border-bottom:0}
+.ln.tot{font-weight:700;font-size:16px;border-top:2px solid var(--a-ink);border-bottom:0;margin-top:4px;padding-top:10px}
+.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+.port{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.port div{aspect-ratio:1;border-radius:12px;display:grid;place-items:end start;padding:6px;font-size:10px;color:#fff;font-weight:500;max-width:100%}
+.rev{border-top:1px solid var(--a-line);padding:10px 0;font-size:13px;line-height:1.4}
+.rev .w{display:flex;justify-content:space-between;font-weight:500;margin-bottom:3px}
+.rev .c{font-size:11px;color:var(--a-ok);display:flex;gap:4px;align-items:center;margin-top:4px}
+.center{text-align:center}
+.big-ic{width:86px;height:86px;border-radius:50%;margin:18px auto 10px;display:grid;place-items:center}
+.pulse{animation:pl 1.4s ease-in-out infinite}
+@keyframes pl{0%,100%{box-shadow:0 0 0 0 rgba(245,179,1,.55)}50%{box-shadow:0 0 0 14px rgba(245,179,1,0)}}
+.spin{width:70px;height:70px;border-radius:50%;border:6px solid var(--a-sky);border-top-color:var(--a-blue);margin:30px auto 16px;animation:sp 1s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.nx{position:relative}
+.hints .nx{animation:pl 1.6s ease-in-out infinite}
+.toast{position:absolute;left:16px;right:16px;top:58px;background:#14202E;color:#fff;border-radius:16px;padding:12px 14px;font-size:13px;display:flex;gap:10px;align-items:center;z-index:20;box-shadow:0 10px 30px rgba(0,0,0,.25);animation:tin .3s ease}
+@keyframes tin{from{transform:translateY(-14px);opacity:0}to{transform:none;opacity:1}}
+.share{border-radius:20px;overflow:hidden;border:1px solid var(--a-line)}
+.share .hd{background:var(--a-blue);color:#fff;padding:12px 14px;font-size:13px;display:flex;justify-content:space-between}
+.share .bd{padding:14px;display:grid;gap:10px}
+.stars-in{display:flex;gap:6px;justify-content:center;margin:10px 0}
+.stars-in button{border:0;background:none;color:#D5DCE5;padding:0}
+.stars-in button.on{color:var(--a-go)}
+.pay{display:grid;gap:8px}
+.pay button{display:flex;gap:12px;align-items:center;border:1.5px solid var(--a-line);background:#fff;border-radius:14px;padding:12px;text-align:left;font-size:14px;color:var(--a-ink)}
+.pay button.on{border-color:var(--a-blue);background:var(--a-sky)}
+.pay small{display:block;color:var(--a-mut);font-size:12px}
+.wk{background:linear-gradient(160deg,#155A97,#0E4677);color:#fff;border-radius:20px;padding:16px}
+.wk .k{font-size:12px;opacity:.8} .wk .v{font-size:28px;font-weight:700}
+.req{border:2px solid var(--a-go);border-radius:18px;padding:14px;background:#fff}
+.badge{display:inline-flex;gap:4px;align-items:center;font-size:11px;font-weight:700;border-radius:8px;padding:3px 8px}
+.badge.u{background:var(--a-red-soft);color:var(--a-red)} .badge.b{background:var(--a-sky);color:var(--a-blue2)}
+.up{display:flex;gap:12px;align-items:center;border:1px solid var(--a-line);border-radius:14px;padding:12px}
+.up .st{margin-left:auto;font-size:12px;font-weight:700;color:var(--a-ok)}
+.up .ic{width:40px;height:40px;border-radius:12px;background:var(--a-sky);display:grid;place-items:center;color:var(--a-blue);flex:none}
+/* panel web */
+.browser{width:min(1000px,100%);background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 30px 60px -30px rgba(10,30,60,.4);border:1px solid #cfd8e3;color:var(--a-ink)}
+.bwrap{overflow-x:auto;width:100%;display:flex;justify-content:center}
+.bbar{background:#E9EEF4;padding:10px 14px;display:flex;gap:10px;align-items:center}
+.bbar i{width:11px;height:11px;border-radius:50%;background:#C9D2DD;display:block}
+.bbar .url{flex:1;background:#fff;border-radius:8px;padding:5px 12px;font-size:12px;color:#5b6b80;font-family:var(--mono)}
+.adm{display:grid;grid-template-columns:200px 1fr;min-height:640px;min-width:860px}
+.side{background:#0E2F52;color:#cfe0f2;padding:18px 12px;display:grid;align-content:start;gap:4px}
+.side .wm{font-weight:700;font-size:20px;color:#fff;margin:0 8px 16px} .side .wm i{font-style:normal;color:var(--a-go)}
+.side button{border:0;background:none;color:inherit;text-align:left;padding:10px 12px;border-radius:10px;font-size:14px;display:flex;justify-content:space-between;align-items:center}
+.side button.on{background:#1B4A7A;color:#fff;font-weight:500}
+.side .cnt{background:var(--a-go);color:#241a00;border-radius:999px;font-size:11px;font-weight:700;padding:1px 7px}
+.main{padding:22px 26px;background:#F5F7FA}
+.main h3{margin:0 0 4px;font-size:22px} .main .sub{margin:0 0 18px}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+.kpi{background:#fff;border:1px solid var(--a-line);border-radius:14px;padding:14px}
+.kpi .k{font-size:12px;color:var(--a-mut)} .kpi .v{font-size:26px;font-weight:700;margin-top:4px;font-variant-numeric:tabular-nums}
+.kpi.al{border-color:#F1D27A;background:#FFFBEF}
+.tbl{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--a-line);border-radius:14px;overflow:hidden;font-size:13px}
+.tbl th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--a-mut);padding:10px 12px;background:#FAFBFD;border-bottom:1px solid var(--a-line)}
+.tbl td{padding:11px 12px;border-bottom:1px solid var(--a-line);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:0}
+.tbl tr.click{cursor:pointer} .tbl tr.click:hover td{background:#F3F7FC}
+.pill{display:inline-block;border-radius:999px;padding:3px 9px;font-size:11px;font-weight:700}
+.pill.y{background:var(--a-go-soft);color:#7a5a00} .pill.g{background:var(--a-ok-soft);color:#14532f} .pill.r{background:var(--a-red-soft);color:var(--a-red)} .pill.b{background:var(--a-sky);color:var(--a-blue2)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.box{background:#fff;border:1px solid var(--a-line);border-radius:14px;padding:16px}
+.box h4{margin:0 0 10px;font-size:15px}
+.doc{border-radius:10px;height:110px;display:grid;place-items:center;color:#fff;font-size:12px;font-weight:500;text-align:center;padding:8px}
+.chk{display:flex;gap:8px;align-items:center;font-size:13px;padding:6px 0}
+.chk .b{width:20px;height:20px;border-radius:6px;background:var(--a-ok);color:#fff;display:grid;place-items:center;flex:none}
+.abtn{border:0;border-radius:10px;padding:10px 14px;font-weight:700;font-size:13px;background:var(--a-blue);color:#fff}
+.abtn.g{background:var(--a-ok)} .abtn.r{background:var(--a-red-soft);color:var(--a-red)} .abtn.w{background:#fff;border:1px solid var(--a-line);color:var(--a-ink)}
+.modal{position:absolute;inset:0;background:rgba(10,20,35,.45);display:grid;place-items:center;z-index:30}
+.modal .m{background:#fff;border-radius:16px;padding:20px;width:380px;max-width:90%}
+.relative{position:relative}
+@media (max-width:900px){.stage{grid-template-columns:1fr}.guide{position:static;order:2}}
+@media (max-width:440px){.phone{height:760px;border-radius:44px;padding:8px}.screen{border-radius:36px}.phone:before{top:16px}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div>
+    <div class="logo"><b>Work</b><i>Go</i> <span style="font-weight:400;font-size:16px;color:var(--muted)">· prototipo navegable</span></div>
+    <p>Elige un escenario y sigue los pasos, o toca directamente la pantalla.</p>
+  </div>
+  <nav class="tabs" id="tabs" aria-label="Escenarios"></nav>
+</header>
+<main class="stage">
+  <aside class="guide" id="guide" aria-live="polite"></aside>
+  <section class="dev" id="dev"></section>
+</main>
+
+<script>
+(function(){
+/* ---------- iconos ---------- */
+const P={
+ search:'<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>',
+ bolt:'<path d="M13 2L4 14h7l-1 8 9-12h-7z" fill="currentColor" stroke="none"/>',
+ check:'<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+ shield:'<path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/>',
+ star:'<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z" fill="currentColor" stroke="none"/>',
+ pin:'<path d="M12 21s-7-6.2-7-11.5A7 7 0 0119 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>',
+ clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+ home:'<path d="M3 11l9-7 9 7v9a1 1 0 01-1 1h-5v-6h-6v6H4a1 1 0 01-1-1z" fill="currentColor" stroke="none"/>',
+ list:'<rect x="4" y="3" width="16" height="18" rx="3" fill="currentColor" stroke="none"/><path d="M8 8h8M8 12h8M8 16h5" stroke="#fff"/>',
+ user:'<circle cx="12" cy="8" r="4" fill="currentColor" stroke="none"/><path d="M4 21c1-4.5 4.5-6.5 8-6.5s7 2 8 6.5z" fill="currentColor" stroke="none"/>',
+ back:'<path d="M15 5l-7 7 7 7"/>',
+ cam:'<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>',
+ share:'<circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="M8.2 10.8l7.6-4.4M8.2 13.2l7.6 4.4"/>',
+ card:'<rect x="3" y="5" width="18" height="14" rx="3"/><path d="M3 10h18M7 15h4"/>',
+ cash:'<rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.8"/>',
+ doc:'<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h6"/>',
+ flag:'<path d="M5 21V4M5 4h11l-2 4 2 4H5"/>',
+ drop:'<path d="M12 3s6 6.5 6 11a6 6 0 01-12 0c0-4.5 6-11 6-11z"/>',
+ plug:'<path d="M9 3v5M15 3v5M6 8h12v3a6 6 0 01-12 0zM12 17v4"/>',
+ key:'<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l2 2M15 8l2 2"/>',
+ saw:'<path d="M4 18L16 6l4 4L8 22z"/><path d="M7 15l1 1M10 12l1 1M13 9l1 1"/>',
+ snow:'<path d="M12 2v20M3.5 7l17 10M3.5 17l17-10"/>',
+ roller:'<rect x="3" y="3" width="15" height="6" rx="2"/><path d="M18 6h2v6h-8v3M11 15h2v6h-2z"/>',
+ bell:'<path d="M6 16V11a6 6 0 0112 0v5l2 2H4z"/><path d="M10 20a2 2 0 004 0"/>',
+ sig:'<rect x="2" y="15" width="3" height="5" rx="1" fill="currentColor" stroke="none"/><rect x="7" y="11" width="3" height="9" rx="1" fill="currentColor" stroke="none"/><rect x="12" y="7" width="3" height="13" rx="1" fill="currentColor" stroke="none"/><rect x="17" y="3" width="3" height="17" rx="1" fill="currentColor" stroke="none"/>',
+ bat:'<rect x="2" y="7" width="18" height="10" rx="3"/><rect x="4" y="9" width="13" height="6" rx="1.5" fill="currentColor" stroke="none"/><path d="M22 10v4"/>',
+ x:'<path d="M6 6l12 12M18 6L6 18"/>',
+ photo:'<rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-8 8"/>',
+ send:'<path d="M3 11l18-8-8 18-2-8z"/>',
+ dl:'<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>',
+ users:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.8 3.4-5.5 6.5-5.5s5.7 1.7 6.5 5.5M16 4.5a3.5 3.5 0 010 7M18 14.8c2 .7 3.2 2.3 3.6 5.2"/>',
+ wallet:'<path d="M4 6h14a2 2 0 012 2v10a2 2 0 01-2 2H4z"/><path d="M4 6V5a1 1 0 011-1h11M15 13h2"/>',
+ alert:'<path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18v.5"/>',
+ grid:'<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>'
+};
+const I=(n,s=20,w=2)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[n]||''}</svg>`;
+const money=v=>'USD '+v.toFixed(2).replace('.',',');
+const stars=(r,s=14)=>{let o='<span class="stars" aria-label="'+r+' de 5">';for(let i=1;i<=5;i++)o+=`<span style="color:${i<=Math.round(r)?'var(--a-go)':'#D5DCE5'}">${I('star',s)}</span>`;return o+'</span>';};
+
+/* ---------- datos ---------- */
+const CATS=[['Gasfitería','drop'],['Electricidad','plug'],['Cerrajería','key'],['Carpintería','saw'],['Climatización','snow'],['Pintura','roller']];
+const W={
+ carlos:{n:'Carlos Rojas',ini:'CR',c:'#2F7D6B',of:'Gasfitero',r:4.9,sv:87,km:'1,2 km',vis:15,hr:12,zona:'Norte · Alborada, Sauces, Guayacanes',exp:'14 años',secap:true,tags:['Fugas','Tuberías','Calefones'],eta:'19:40'},
+ miguel:{n:'Miguel Bajaña',ini:'MB',c:'#8A5A2B',of:'Gasfitero e instalador sanitario',r:4.7,sv:54,km:'2,0 km',vis:12,hr:10,zona:'Norte',exp:'9 años',secap:false,tags:['Sanitarios','Bombas']},
+ luis:{n:'Luis Mendoza',ini:'LM',c:'#5B4BA0',of:'Gasfitero',r:4.5,sv:31,km:'3,4 km',vis:10,hr:9,zona:'Norte',exp:'6 años',secap:false,tags:['Fugas','Grifería']},
+ ana:{n:'Ana Torres',ini:'AT',c:'#C0533F',of:'Cerrajera',r:4.8,sv:63,km:'1,8 km',vis:12,hr:10,zona:'Centro · Centenario, Garay, Orellana',exp:'11 años',secap:true,tags:['Cerraduras','Aperturas','Cilindros'],eta:'09:55'},
+ pedro:{n:'Pedro Salazar',ini:'PS',c:'#3B6EA8',of:'Cerrajero',r:4.6,sv:40,km:'2,6 km',vis:10,hr:9,zona:'Centro',exp:'7 años',secap:false,tags:['Cerraduras','Candados']},
+ rene:{n:'René Villao',ini:'RV',c:'#6B7A2A',of:'Cerrajero',r:4.3,sv:18,km:'4,1 km',vis:8,hr:8,zona:'Centro y Sur',exp:'4 años',secap:false,tags:['Duplicado de llaves']},
+ jorge:{n:'Jorge Luis Quimí',ini:'JQ',c:'#D08A00',of:'Electricista y gasfitero',r:4.8,sv:112,km:'3,1 km',vis:15,hr:12,zona:'Norte y vía a la Costa',exp:'20 años',secap:true,tags:['Alumbrado','Tableros','Cortocircuitos'],eta:'21:45'},
+ dario:{n:'Darío Ponce',ini:'DP',c:'#7A3E8E',of:'Electricista',r:4.6,sv:45,km:'5,0 km',vis:15,hr:11,zona:'Vía a la Costa',exp:'8 años',secap:true,tags:['Instalaciones']}
+};
+const LIST={'Gasfitería':['carlos','miguel','luis'],'Cerrajería':['ana','pedro','rene'],'Electricidad':['jorge','dario','carlos']};
+const SC={
+ cliente:{tab:'Cliente',role:'Cliente · Buyer persona 1',title:'María Fernanda: fuga de agua',story:'Lunes 19:00. María llega del trabajo y encuentra una fuga en la tubería del baño. Compara gasfiteros verificados, elige uno, aprueba la cotización, cierra con el código, paga y califica.',
+  user:'María',ini:'MF',uc:'#B04A6B',cat:'Gasfitería',prob:'Hay una fuga en la tubería del baño y se está acumulando agua en el piso.',other:false,addr:'Mi casa · Cdla. Alborada 6.ª etapa, Mz. 612 V. 8',urgent:false,mode:'manual',time:'Lun 19:04',now:'19:04',w:'carlos',code:'4821',id:'WG-1042',
+  quote:[['Visita y diagnóstico',15],['Cambio de tramo de tubería (mano de obra)',20],['Materiales: tubo PVC ½" y 2 codos',8.5]],share:null,rate:true,
+  feats:'Búsqueda y selección manual · Tarifas referenciales · Cotización en la aplicación · Notificaciones de estado · Código de servicio · Pago y comprobantes · Calificaciones y reseñas',
+  steps:[['c-home','Elige la categoría Gasfitería'],['c-form','Describe el problema y elige “Elegir yo”'],['c-list','Compara tres gasfiteros verificados'],['c-prof','Revisa el perfil, la verificación y las tarifas'],['c-wait','Envía la solicitud y espera la aceptación'],['c-status','Mira la hora de llegada y tu código'],['c-quote','Aprueba la cotización'],['c-close','Confirma el cierre con el código'],['c-pay','Paga en la aplicación'],['c-rate','Califica el servicio'],['c-rcpt','Revisa el comprobante']]},
+ familiar:{tab:'Familiar a distancia',role:'Cliente · Buyer persona 4',title:'Andrés: cerradura trabada en casa de su mamá',story:'Martes 09:20. Rosa, de 72 años, no puede salir porque la cerradura se trabó. Andrés está en una reunión y contrata desde su celular un cerrajero para otra dirección.',
+  user:'Andrés',ini:'AM',uc:'#3D7A4E',cat:'Cerrajería',prob:'La cerradura de la puerta principal se trabó y mi mamá no puede salir de la casa.',other:true,addr:'Casa de mamá · Barrio del Centenario, Av. Quito y Calle 8',recv:'Rosa Mora (mamá)',urgent:false,mode:'manual',time:'Mar 09:20',now:'09:21',w:'ana',code:'7350',id:'WG-1057',
+  quote:[['Visita y diagnóstico',12],['Desarme y cambio de cilindro',18],['Materiales: cilindro de cerradura',14]],share:'mamá',rate:true,
+  feats:'Solicitud para otra dirección · Notificaciones de estado · Código de servicio · Pago y comprobantes · Calificaciones y reseñas',
+  steps:[['c-home','Elige la categoría Cerrajería'],['c-form','Cambia la dirección a “Otra dirección”'],['c-list','Compara cerrajeros cerca de su mamá'],['c-prof','Revisa el perfil verificado y la tarifa'],['c-wait','Envía la solicitud'],['c-status','Sigue las notificaciones'],['c-share','Envía a su mamá la foto y el código'],['c-quote','Aprueba el importe'],['c-close','Confirma con su mamá y cierra'],['c-pay','Paga en la aplicación'],['c-rate','Califica a la cerrajera']]},
+ urbanizacion:{tab:'Administradora',role:'Cliente · Buyer persona 3',title:'Patricia: cortocircuito en la urbanización',story:'Sábado 21:10. El alumbrado de la entrada de la urbanización se apagó por un cortocircuito. Patricia pide un servicio urgente con asignación automática y coordina con la garita.',
+  user:'Patricia',ini:'PV',uc:'#6A4FA3',cat:'Electricidad',prob:'Cortocircuito en el alumbrado de la entrada; la garita y el acceso quedaron a oscuras.',other:true,addr:'Urb. Los Arrayanes · Vía a la Costa km 14, entrada principal',recv:'Garita principal',urgent:true,mode:'auto',time:'Sáb 21:12',now:'21:13',w:'jorge',code:'3906',id:'WG-1061',
+  quote:[['Visita y diagnóstico',15],['Reparación del circuito de alumbrado',30],['Materiales: breaker 20 A y cable n.º 12',16]],share:'garita',rate:false,report:true,
+  feats:'Solicitud inmediata (modo urgencia) · Asignación automática · Código de servicio · Pago y comprobantes',
+  steps:[['c-home','Activa el modo urgencia'],['c-form','Elige Electricidad, urgencia y asignación automática'],['c-auto','Work-GO asigna un electricista compatible'],['c-status','Revisa la hora de llegada y el código'],['c-share','Comparte con la garita los datos y el código'],['c-quote','Aprueba la cotización con el recargo'],['c-close','Confirma el cierre'],['c-pay','Paga en la aplicación'],['c-rcpt','Descarga el comprobante para la directiva']]},
+ trabajador:{tab:'Trabajador',role:'Trabajador · Buyer persona 2',title:'Jorge Luis: recibe y atiende una solicitud',story:'Jorge Luis, gasfitero y electricista de Bastión Popular, se registra, sube sus documentos y, ya aprobado, atiende la solicitud urgente de la urbanización Los Arrayanes.',
+  user:'Jorge Luis',w:'jorge',code:'3906',id:'WG-1061',urgent:true,
+  quote:[['Visita y diagnóstico',15],['Reparación del circuito de alumbrado',30],['Materiales: breaker 20 A y cable n.º 12',16]],
+  feats:'Registro y verificación de usuarios · Perfil y solicitudes del trabajador · Cotización en la aplicación · Código de servicio · Pago y comprobantes · Interfaz sencilla',
+  steps:[['w-reg','Se registra con su oficio, zona y tarifas'],['w-docs','Sube cédula y antecedentes para revisión'],['w-ok','Su perfil queda aprobado'],['w-home','Recibe una solicitud en su zona'],['w-req','Revisa el detalle y acepta'],['w-eta','Informa su hora de llegada'],['w-start','Ingresa el código para iniciar'],['w-quote','Envía la cotización'],['w-end','Ingresa el código para cerrar'],['w-wallet','Consulta su saldo y su reseña']]},
+ panel:{tab:'Panel web',role:'Equipo administrativo de Work-GO',title:'Panel web de administración',story:'El equipo de Work-GO revisa los documentos de un trabajador nuevo antes de habilitarlo y atiende un reclamo por un trabajo deficiente revisando las evidencias de ambas partes.',
+  feats:'Panel web de administración · Registro y verificación de usuarios · Gestión de reclamos · Reporte de incidentes',
+  steps:[['a-dash','Revisa el resumen del día'],['a-ver','Abre las verificaciones pendientes'],['a-verd','Revisa cédula, antecedentes y SECAP, y aprueba'],['a-rec','Abre los reclamos'],['a-recd','Revisa las evidencias y aplica un reembolso']]}
+};
+const ORDER=['cliente','familiar','urbanizacion','trabajador','panel'];
+
+/* ---------- estado ---------- */
+let S={sc:'cliente',scr:'c-login',tmp:{}};let timers=[];let hints=true;
+const C=()=>SC[S.sc];
+const total=c=>c.quote.reduce((a,q)=>a+q[1],0)+(c.urgent?10:0);
+const wk=()=>W[C().w];const cw=()=>{const w=W[S.tmp.pick||C().w];return Object.assign({eta:W[C().w].eta},w);};
+
+/* ---------- piezas ---------- */
+const av=(ini,col,cls='',dot=false)=>`<div class="av ${cls}" style="background:${col}">${ini}${dot?'<span class="dot"></span>':''}</div>`;
+const ver='<span class="ver">'+I('shield',12,2.4)+'Verificado</span>';
+function shell(body,{back=null,nav='home',bell=true}={}){
+ const c=C();
+ return `<div class="status"><span>${c.now||'10:45'}</span><span class="sig">${I('sig',17)}${I('bat',22,1.6)}</span></div>
+ <div class="appbar">${back?`<button class="back" data-go="${back}" aria-label="Atrás">${I('back',18,2.4)}</button>`:''}<span class="wm">Work<i>Go</i></span>${bell?`<button class="bell" aria-label="Notificaciones">${I('bell',20)}</button>`:''}</div>
+ <div class="body" id="appbody">${body}</div>
+ ${nav?`<div class="nav"><button class="${nav==='home'?'on':''}" data-go="${S.sc==='trabajador'?'w-home':'c-home'}">${I('home',24)}Inicio</button><button class="${nav==='act'?'on':''}" data-go="${S.sc==='trabajador'?'w-wallet':'c-act'}">${I('list',24)}${S.sc==='trabajador'?'Saldo':'Actividad'}</button><button class="${nav==='me'?'on':''}" data-go="${S.sc==='trabajador'?'w-ok':'c-me'}">${I('user',24)}Perfil</button></div>`:''}`;
+}
+function wcard(id,go){const w=W[id];return `<button class="card" style="text-align:left;width:100%;color:inherit" data-go="${go}" data-w="${id}">
+ <div class="row">${av(w.ini,w.c,'',true)}<div style="min-width:0;flex:1"><div class="row" style="gap:6px;justify-content:space-between"><span class="nm">${w.n}</span>${ver}</div><div class="rl">${w.of}</div>
+ <div style="margin-top:4px;font-size:13px">${stars(w.r)} <b>${w.r.toString().replace('.',',')}</b> <span class="rl">· ${w.sv} servicios cerrados</span></div></div></div>
+ <div class="meta"><span>${I('pin',13)} ${w.km}</span><span>${I('clock',13)} Disponible ahora</span><span class="price">Visita desde ${money(w.vis)}</span></div></button>`;}
+
+/* ---------- pantallas: cliente ---------- */
+const X={};
+X['c-login']=()=>{const c=C();return shell(`<div class="center" style="padding-top:30px"><div style="font-size:44px;font-weight:700;color:var(--a-blue)">Work<span style="color:var(--a-go)">Go</span></div>
+ <p class="sub" style="margin:8px 0 26px">Trabajadores verificados para tu hogar,<br>con precio claro antes de empezar.</p></div>
+ <label class="lbl" for="lg-m">Correo o celular</label><input id="lg-m" class="inp" value="${c.user.toLowerCase().replace(/ /g,'')}@correo.com">
+ <label class="lbl" for="lg-p">Contraseña</label><input id="lg-p" class="inp" type="password" value="workgo2026">
+ <div class="btns"><button class="btn nx" data-go="c-home">Ingresar</button><button class="btn ghost">Crear cuenta</button></div>
+ <p class="note" style="justify-content:center">${I('shield',14)} Tus datos se usan solo para prestar el servicio.</p>`,{nav:null,bell:false});};
+X['c-home']=()=>{const c=C();const ci=CATS.map(([n,i])=>`<button class="cat ${n===c.cat&&!c.urgent?'nx':''}" data-go="c-form" data-cat="${n}" style="border-radius:16px"><span class="ic">${I(i,30)}</span>${n}</button>`).join('');
+ return shell(`<div class="h1">Hola ${c.user}!</div>
+ <div class="search">${I('search',20)} ¿Qué necesitas reparar?</div>
+ <button class="urg ${c.urgent?'nx':''}" data-go="c-form" data-urg="1"><b>Modo urgencia</b><span>Fugas, cortocircuitos o cerraduras trabadas. Te asignamos al trabajador disponible más cercano.</span><span class="bolt">${I('bolt',24)}</span></button>
+ <div class="h2">Categorías</div><div class="cats">${ci}</div>
+ <div class="ad"><span class="tag">Publicidad</span><span>Ferretería El Tornillo: 10 % en materiales con tu comprobante Work-GO.</span></div>
+ <div class="h2">Próximos servicios</div>
+ <div class="card row"><div style="background:var(--a-go);border-radius:14px;width:58px;height:58px;display:grid;place-items:center;font-weight:700;line-height:1;text-align:center;flex:none"><span style="font-size:12px">Jue</span><span style="font-size:22px">12</span></div>
+ <div><div class="nm">Mantenimiento de aire acondicionado</div><div class="rl">09:00 a 11:00 · Programado</div></div></div>`);};
+X['c-form']=()=>{const c=C();const t=S.tmp;if(t.other===undefined){t.other=false;t.when='now';}if(t.urgent===undefined)t.urgent=c.urgent;if(t.mode===undefined)t.mode=t.urgent?'auto':'manual';
+ const needOther=c.other&&!t.other;
+ return shell(`<div class="h1" style="font-size:24px">${I(CATS.find(x=>x[0]===c.cat)[1],24)} ${c.cat}</div>
+ <label class="lbl" for="f-p">¿Qué pasa?</label><textarea id="f-p" class="inp" rows="3">${c.prob}</textarea>
+ <div class="row" style="margin-top:8px"><div class="thumb" style="background:linear-gradient(135deg,#7D8C9C,#3E4B59)">${I('photo',24)}</div><button class="chip">${I('cam',14)} Agregar foto</button></div>
+ <span class="lbl">¿Dónde?</span>
+ <div class="seg"><button class="${!t.other?'on':''}" data-act="other0">Mi dirección</button><button class="${t.other?'on':''} ${needOther?'nx':''}" data-act="other1">Otra dirección</button></div>
+ <div class="card" style="margin-top:8px;font-size:13px"><div class="row" style="gap:8px">${I('pin',18)}<div><b>${t.other?c.addr||'Otra dirección':'Mi casa · '+(c.other?'Kennedy Norte, Mz. 105':c.addr.replace('Mi casa · ',''))}</b>${t.other&&c.recv?`<div class="rl">Recibe: ${c.recv}</div>`:''}</div></div></div>
+ <span class="lbl">¿Cuándo?</span>
+ <div class="seg"><button class="${t.when==='now'?'on':''}" data-act="when-now">Lo antes posible</button><button class="${t.when==='prog'?'on':''}" data-act="when-prog">Programar</button></div>
+ ${t.when==='prog'?'<div class="card" style="margin-top:8px;font-size:13px">'+I('clock',16)+' Jueves 12, de 09:00 a 11:00</div>':''}
+ <button class="tog ${t.urgent?'on':''}" data-act="urg"><span><b>Modo urgencia</b><small>Prioridad para trabajadores disponibles en tu zona. Recargo de USD 10 en noches, fines de semana y feriados.</small></span><span class="sw"></span></button>
+ ${t.urgent?`<div class="warn">${c.urgent?'Hoy es sábado en la noche: se aplica el recargo por urgencia de <b>USD 10</b>.':'En este horario no se aplica recargo.'}</div>`:''}
+ <span class="lbl">¿Cómo eliges al trabajador?</span>
+ <div class="seg"><button class="${t.mode==='manual'?'on':''}" data-act="mode-manual">Elegir yo</button><button class="${t.mode==='auto'?'on':''}" data-act="mode-auto">Asignación automática</button></div>
+ <p class="note">${I('shield',14)} ${t.mode==='auto'?'Work-GO envía la solicitud al trabajador compatible según oficio, zona, disponibilidad y reputación. Él decide si acepta.':'Compara perfiles verificados por zona, tarifa y calificación.'}</p>
+ <div class="btns"><button class="btn ${needOther?'':'nx'}" data-act="submit">${t.mode==='auto'?'Solicitar asignación':'Ver trabajadores'}</button></div>`,{back:'c-home'});};
+X['c-list']=()=>{const c=C();return shell(`<div class="h1" style="font-size:24px">${c.cat} cerca de ${S.tmp.other?'la dirección':'ti'}</div>
+ <div class="search" style="padding:10px 14px;font-size:14px">${I('search',18)} Buscar por nombre o especialidad</div>
+ <div class="chips" style="margin:12px 0"><span class="chip on">Verificados</span><span class="chip on">Disponible ahora</span><span class="chip">Más cerca</span><span class="chip">Mejor calificados</span><span class="chip">Menor tarifa</span></div>
+ <div class="col">${LIST[c.cat].map((id,i)=>wcard(id,'c-prof').replace('class="card"',i===0?'class="card nx"':'class="card"')).join('')}</div>
+ <p class="note">${I('shield',14)} Solo aparecen trabajadores con identidad, antecedentes y contacto revisados por Work-GO.</p>`,{back:'c-form'});};
+X['c-prof']=()=>{const c=C();const id=S.tmp.pick||c.w;const w=W[id];const cols=['#7A8A9A','#566676','#8B7A66','#5E7A6E','#6E6A8A'];
+ return shell(`<div class="row" style="align-items:flex-start">${av(w.ini,w.c,'lg',true)}<div style="flex:1;min-width:0"><div class="nm" style="font-size:20px">${w.n}</div><div class="rl">${w.of} · ${w.exp}</div>
+ <div style="margin-top:6px">${stars(w.r)} <b>${w.r.toString().replace('.',',')}</b></div><div class="rl">${w.sv} servicios cerrados con código</div></div></div>
+ <div class="chips" style="margin-top:12px"><span class="ver">${I('check',12,3)} Identidad verificada</span><span class="ver">${I('check',12,3)} Antecedentes revisados</span>${w.secap?`<span class="ver">${I('check',12,3)} Certificado SECAP</span>`:''}</div>
+ <div class="h2">Tarifas referenciales</div>
+ <div class="card"><div class="ln"><span>Visita y diagnóstico</span><b class="num">${money(w.vis)}</b></div><div class="ln"><span>Hora de trabajo</span><b class="num">${money(w.hr)}</b></div><div class="ln"><span>Materiales</span><span>Según cotización</span></div></div>
+ <p class="note">${I('doc',14)} Si el costo depende de revisar el daño, ${w.n.split(' ')[0]} te enviará una cotización y solo empieza cuando la apruebes.</p>
+ <div class="h2">Trabajos realizados</div><div class="port">${w.tags.concat(['Antes y después','Instalación']).slice(0,5).map((t,i)=>`<div style="background:linear-gradient(150deg,${cols[i]},#2C3540)">${t}</div>`).join('')}<div style="background:var(--a-soft);color:var(--a-mut);place-items:center">+8</div></div>
+ <div class="h2">Reseñas</div>
+ <div class="rev"><div class="w"><span>Gabriela C.</span>${stars(5,12)}</div>Llegó a la hora que dijo y me explicó todo antes de cobrar.<div class="c">${I('check',12,3)} Servicio cerrado con código · hace 2 semanas</div></div>
+ <div class="rev"><div class="w"><span>Santiago L.</span>${stars(5,12)}</div>Precio justo y dejó todo limpio.<div class="c">${I('check',12,3)} Servicio cerrado con código · hace 1 mes</div></div>
+ <div class="btns"><button class="btn nx" data-go="c-wait">Solicitar a ${w.n.split(' ')[0]}</button></div>`,{back:'c-list'});};
+X['c-wait']=()=>{const c=C();const w=cw();
+ return shell(`<div class="center"><div class="spin"></div><div class="h1" style="font-size:22px">Solicitud enviada</div><p class="sub" style="margin:0">Esperando que ${w.n.split(' ')[0]} acepte.<br>Te avisaremos apenas responda.</p></div>
+ <div class="card row" style="margin-top:24px">${av(w.ini,w.c)}<div><div class="nm">${w.n}</div><div class="rl">${c.cat} · ${c.time}</div></div></div>
+ <div class="btns"><button class="btn ghost" data-go="c-list">Cancelar solicitud</button></div>`,{nav:null});};
+X['c-auto']=()=>{const c=C();const w=wk();const done=S.tmp.autoDone;
+ return shell(done?`<div class="center"><div class="big-ic" style="background:var(--a-ok-soft);color:var(--a-ok)">${I('check',44,3)}</div><div class="h1" style="font-size:22px">Te asignamos un electricista</div><p class="sub" style="margin:0">${w.n.split(' ')[0]} aceptó tu solicitud urgente.</p></div>
+ <div class="card" style="margin-top:18px"><div class="row">${av(w.ini,w.c,'',true)}<div style="flex:1"><div class="row" style="justify-content:space-between;gap:6px"><span class="nm">${w.n}</span>${ver}</div><div class="rl">${w.of}</div><div style="font-size:13px;margin-top:3px">${stars(w.r)} <b>4,8</b> <span class="rl">· ${w.sv} servicios</span></div></div></div>
+ <div class="meta"><span>${I('pin',13)} ${w.km}</span><span class="price">Visita ${money(w.vis)} + recargo USD 10</span></div></div>
+ <div class="okbox" style="margin-top:12px">Criterios: oficio Electricidad, zona vía a la Costa, disponible ahora, calificación 4,8 y 112 servicios cerrados.</div>
+ <div class="btns"><button class="btn nx" data-go="c-status">Ver estado del servicio</button></div>`:
+ `<div class="center"><div class="spin"></div><div class="h1" style="font-size:22px">Buscando electricista</div><p class="sub">Comparando oficio, zona, disponibilidad y reputación…</p></div>
+ <div class="col" style="margin-top:8px">${['Electricidad · vía a la Costa','Disponible ahora','Calificación mínima 4,5'].map(t=>`<div class="okbox row" style="gap:8px">${I('check',16,3)} ${t}</div>`).join('')}</div>`,{nav:null});};
+X['c-status']=()=>{const c=C();const w=cw();const st=S.tmp.st||1;
+ const items=[['Solicitud aceptada',c.now],['En camino · llegada aprox. '+w.eta,'Hora indicada por '+w.n.split(' ')[0]],['Llegó al lugar','Entrégale tu código para iniciar'],['Trabajo en curso',''],['Servicio cerrado','']];
+ return shell(`<div class="h1" style="font-size:24px">Servicio ${c.id}</div>
+ <div class="card row">${av(w.ini,w.c)}<div style="flex:1"><div class="nm">${w.n}</div><div class="rl">${w.of} · ${ver}</div></div></div>
+ <div class="card" style="margin-top:12px;text-align:center;background:var(--a-sky);border-color:#C6DAEE"><div style="font-size:13px;font-weight:700;color:var(--a-blue2)">Tu código de servicio</div>
+ <div class="code">${c.code.split('').map(d=>`<span>${d}</span>`).join('')}</div><div style="font-size:12px;color:var(--a-mut)">Dáselo a ${w.n.split(' ')[0]} solo cuando llegue y confirmes que es la persona de la foto.</div></div>
+ <div class="h2">Estado</div>
+ <ul class="tl">${items.map((x,i)=>`<li class="${i<st?'ok':i===st?'now':''}"><span class="b">${i<st?I('check',12,3.4):''}</span><div><div class="t">${x[0]}</div><div class="d">${x[1]}</div></div></li>`).join('')}</ul>
+ <p class="note">${I('clock',14)} Sin rastreo GPS: el trabajador informa su hora de llegada y te notificamos cada cambio.</p>
+ <div class="btns">${c.share?`<button class="btn go nx" data-go="c-share">${I('share',18)} Compartir con ${c.share==='mamá'?'mi mamá':'la garita'}</button><button class="btn ghost" data-act="arrive">Simular: ${w.n.split(' ')[0]} llegó</button>`:`<button class="btn nx" data-act="arrive">Simular: ${w.n.split(' ')[0]} llegó</button>`}
+ <button class="btn red sm" style="width:100%" data-go="c-report">${I('flag',16)} Reportar un problema</button></div>`,{back:'c-home'});};
+X['c-share']=()=>{const c=C();const w=cw();const sent=S.tmp.sent;
+ return shell(`<div class="h1" style="font-size:24px">Compartir con ${c.share==='mamá'?'Rosa':'la garita'}</div><p class="sub">${c.share==='mamá'?'Tu mamá podrá comprobar quién llega antes de abrir la puerta.':'El guardia podrá comprobar la identidad del técnico al ingreso, según el control de acceso de la urbanización.'}</p>
+ <div class="share"><div class="hd"><b>Work-GO · Servicio ${c.id}</b><span>${c.time}</span></div><div class="bd">
+ <div class="row">${av(w.ini,w.c,'lg')}<div><div class="nm" style="font-size:18px">${w.n}</div><div class="rl">${w.of}</div><div style="margin-top:4px">${ver}</div></div></div>
+ <div class="ln"><span>Cédula</span><span class="num">09•• ••• 4471</span></div><div class="ln"><span>Llega aprox.</span><b>${w.eta}</b></div><div class="ln"><span>Dirección</span><span style="text-align:right">${c.addr.split(' · ')[1]}</span></div>
+ <div style="text-align:center;font-size:12px;color:var(--a-mut)">Código del servicio</div><div class="code" style="margin:0">${c.code.split('').map(d=>`<span style="width:44px;height:54px;font-size:26px">${d}</span>`).join('')}</div>
+ <div style="font-size:11px;color:var(--a-mut);text-align:center">Pide este código al técnico y compáralo antes de dejarlo ingresar.</div></div></div>
+ <div class="btns">${sent?`<div class="okbox row" style="gap:8px">${I('check',16,3)} Enviado a ${c.share==='mamá'?'Rosa Mora por WhatsApp':'Garita principal por WhatsApp'}</div><button class="btn nx" data-act="arrive">Continuar: ${w.n.split(' ')[0]} llegó</button>`:`<button class="btn go nx" data-act="send">${I('send',18)} Enviar por WhatsApp</button>`}</div>`,{back:'c-status'});};
+X['c-quote']=()=>{const c=C();const w=cw();
+ return shell(`<div class="h1" style="font-size:24px">Cotización recibida</div><p class="sub">${w.n.split(' ')[0]} revisó el daño y te envía el costo. El trabajo empieza solo si lo apruebas.</p>
+ <div class="card">${c.quote.map(q=>`<div class="ln"><span>${q[0]}</span><span class="num">${money(q[1])}</span></div>`).join('')}${c.urgent?`<div class="ln"><span>Recargo por urgencia (sábado noche)</span><span class="num">${money(10)}</span></div>`:''}<div class="ln tot"><span>Total</span><span class="num">${money(total(c))}</span></div></div>
+ <div class="card row" style="margin-top:10px;gap:10px"><div class="thumb" style="background:linear-gradient(135deg,#8A97A6,#46525F);width:56px;height:56px">${I('photo',22)}</div><div class="rl">Foto del daño adjunta por ${w.n.split(' ')[0]} · ${c.now}</div></div>
+ <p class="note">${I('shield',14)} La tarifa la fija el trabajador; Work-GO no cambia el precio. Queda guardada como respaldo del servicio.</p>
+ <div class="btns two"><button class="btn ghost" data-go="c-status">Rechazar</button><button class="btn nx" data-act="approve">Aprobar</button></div>`,{back:'c-status'});};
+X['c-close']=()=>{const c=C();const w=cw();
+ return shell(`<div class="h1" style="font-size:24px">${w.n.split(' ')[0]} terminó el trabajo</div>
+ <ul class="tl" style="margin:8px 0 12px"><li class="ok"><span class="b">${I('check',12,3.4)}</span><div><div class="t">Inicio confirmado con tu código</div><div class="d">${c.now}</div></div></li><li class="now"><span class="b"></span><div><div class="t">Esperando tu confirmación</div><div class="d">Revisa que ${c.share==='mamá'?'tu mamá confirme que ':''}el problema quedó resuelto</div></div></li></ul>
+ <div class="card center"><div style="font-weight:700">¿Quedó resuelto?</div><p class="rl" style="margin:6px 0 4px">Si todo está bien, entrega de nuevo tu código para cerrar el servicio.</p><div class="code">${c.code.split('').map(d=>`<span>${d}</span>`).join('')}</div></div>
+ <div class="btns"><button class="btn nx" data-go="c-pay">Sí, quedó resuelto</button><button class="btn red" data-go="c-report">No, presentar un reclamo</button></div>`,{nav:null});};
+X['c-pay']=()=>{const c=C();const m=S.tmp.pm||'card';
+ return shell(`<div class="h1" style="font-size:24px">Pagar servicio</div>
+ <div class="card"><div class="ln"><span>Servicio ${c.id}</span><span>${c.cat}</span></div><div class="ln tot" style="border-top:0;margin:0"><span>Total a pagar</span><span class="num">${money(total(c))}</span></div></div>
+ <span class="lbl">Método de pago</span>
+ <div class="pay"><button class="${m==='card'?'on':''}" data-act="pm-card">${I('card',22)}<span>Tarjeta de débito o crédito<small>Pago seguro con pasarela integrada</small></span></button>
+ <button class="${m==='cash'?'on':''}" data-act="pm-cash">${I('cash',22)}<span>Efectivo al trabajador<small>Igual queda tu comprobante en Work-GO</small></span></button></div>
+ ${m==='card'?'<div class="card row" style="margin-top:10px">'+I('card',20)+'<span class="num">Visa •••• 2048</span><span style="margin-left:auto" class="rl">Cambiar</span></div>':''}
+ <p class="note">${I('shield',14)} Si algo sale mal, tienes respaldo para reclamos y reembolsos.</p>
+ <div class="btns"><button class="btn nx" data-act="pay">Pagar ${money(total(c))}</button></div>`,{back:'c-close',nav:null});};
+X['c-rate']=()=>{const c=C();const w=cw();const r=S.tmp.r||5;
+ return shell(`<div class="center"><div class="big-ic" style="background:var(--a-ok-soft);color:var(--a-ok)">${I('check',44,3)}</div><div class="h1" style="font-size:22px">Pago realizado</div><p class="sub" style="margin:0">¿Cómo te fue con ${w.n.split(' ')[0]}?</p></div>
+ <div class="stars-in" role="group" aria-label="Calificación">${[1,2,3,4,5].map(i=>`<button class="${i<=r?'on':''}" data-act="r${i}" aria-label="${i} estrellas">${I('star',38)}</button>`).join('')}</div>
+ <div class="chips" style="justify-content:center">${['Puntual','Precio justo','Dejó limpio','Explicó el trabajo','Amable'].map((t,i)=>`<span class="chip ${i<3?'on':''}">${t}</span>`).join('')}</div>
+ <label class="lbl" for="r-t">Tu reseña</label><textarea id="r-t" class="inp" rows="3">${c.share==='mamá'?'Llegó rápido, mi mamá comprobó el código y quedó todo funcionando.':'Llegó a la hora indicada y reparó la fuga en menos de una hora.'}</textarea>
+ <p class="note">${I('check',14,3)} Solo los servicios cerrados con código pueden dejar reseña.</p>
+ <div class="btns"><button class="btn nx" data-go="c-rcpt">Enviar reseña</button></div>`,{nav:null});};
+X['c-rcpt']=()=>{const c=C();const w=cw();
+ return shell(`<div class="h1" style="font-size:24px">Comprobante</div>
+ <div class="card"><div class="row" style="justify-content:space-between"><b>Work-GO · ${c.id}</b><span class="badge b">Pagado</span></div>
+ <div class="ln"><span>Fecha</span><span>${c.time}</span></div><div class="ln"><span>Trabajador</span><span>${w.n}</span></div><div class="ln"><span>Dirección</span><span style="text-align:right">${c.addr.split(' · ')[1]}</span></div>
+ ${c.quote.map(q=>`<div class="ln"><span>${q[0]}</span><span class="num">${money(q[1])}</span></div>`).join('')}${c.urgent?`<div class="ln"><span>Recargo por urgencia</span><span class="num">${money(10)}</span></div>`:''}
+ <div class="ln tot"><span>Total pagado</span><span class="num">${money(total(c))}</span></div><div class="rl" style="font-size:12px">Inicio y cierre confirmados con código · Pago con tarjeta</div></div>
+ ${c.report?`<div class="okbox" style="margin-top:10px">Guardado en <b>Reportes · Urb. Los Arrayanes</b> para el informe mensual a la directiva.</div>`:''}
+ <div class="btns"><button class="btn ${c.report?'nx':''}" data-act="pdf">${I('dl',18)} Descargar PDF</button>${c.report?'<button class="btn ghost" data-act="pdf2">Exportar reporte del mes</button>':''}<button class="btn red sm" style="width:100%" data-go="c-report">${I('flag',16)} Presentar un reclamo</button></div>`,{nav:'act'});};
+X['c-report']=()=>shell(`<div class="h1" style="font-size:24px">Reportar o reclamar</div><p class="sub">Tu caso llega al equipo de Work-GO, que revisa las evidencias de ambas partes.</p>
+ <span class="lbl">Tipo</span><div class="chips"><span class="chip on">Trabajo deficiente</span><span class="chip">No llegó</span><span class="chip">Daño en el inmueble</span><span class="chip">Comportamiento inapropiado</span><span class="chip">Intento de fraude</span></div>
+ <label class="lbl" for="rp-t">Cuéntanos qué pasó</label><textarea id="rp-t" class="inp" rows="4" placeholder="Describe el problema"></textarea>
+ <div class="row" style="margin-top:8px"><button class="chip">${I('cam',14)} Agregar fotos</button></div>
+ <div class="btns"><button class="btn" data-act="reportsend">Enviar al equipo de Work-GO</button></div>`,{back:'c-status'});
+X['c-act']=()=>{const c=C();return shell(`<div class="h1" style="font-size:24px">Actividad</div>
+ ${[[c.id,c.cat,c.time,total(c),'Pagado'],['WG-0915','Climatización','Jue 22 oct',35,'Pagado'],['WG-0870','Pintura','Sáb 10 oct',120,'Pagado']].map(x=>`<button class="card" style="width:100%;text-align:left;margin-bottom:8px;color:inherit" data-go="c-rcpt"><div class="row" style="justify-content:space-between"><b>${x[1]}</b><span class="num">${money(x[3])}</span></div><div class="rl">${x[0]} · ${x[2]} · ${x[4]}</div></button>`).join('')}`,{nav:'act'});};
+X['c-me']=()=>{const c=C();return shell(`<div class="row" style="margin-top:6px">${av(c.ini,c.uc,'lg')}<div><div class="nm" style="font-size:20px">${c.user}</div><div class="rl">${S.sc==='urbanizacion'?'Administradora · Urb. Los Arrayanes':'Cliente'}</div></div></div>
+ <div class="h2">Mis direcciones</div><div class="card">${c.other?`<div class="ln"><span>${c.addr.split(' · ')[0]}</span><span class="rl">${c.addr.split(' · ')[1]}</span></div>`:''}<div class="ln"><span>Mi casa</span><span class="rl">${c.other?'Kennedy Norte':'Alborada'}</span></div></div>
+ <div class="h2">Privacidad</div><p class="sub" style="margin:0">Tu dirección exacta solo se comparte con el trabajador que acepta tu solicitud.</p>`,{nav:'me'});};
+
+/* ---------- pantallas: trabajador ---------- */
+X['w-reg']=()=>shell(`<div class="h1" style="font-size:24px">Crea tu perfil de trabajador</div><p class="sub">Pocos pasos. Lo puedes completar desde el celular.</p>
+ <label class="lbl" for="w-n">Nombre completo</label><input id="w-n" class="inp" value="Jorge Luis Quimí">
+ <label class="lbl" for="w-c">Celular</label><input id="w-c" class="inp" value="099 •••• 312">
+ <span class="lbl">¿Qué sabes hacer?</span><div class="chips"><span class="chip on">${I('plug',13)} Electricidad</span><span class="chip on">${I('drop',13)} Gasfitería</span><span class="chip">Cerrajería</span><span class="chip">Pintura</span><span class="chip">Carpintería</span></div>
+ <span class="lbl">¿Dónde trabajas?</span><div class="chips"><span class="chip on">Norte</span><span class="chip on">Vía a la Costa</span><span class="chip">Centro</span><span class="chip">Sur</span><span class="chip">Samborondón</span></div>
+ <span class="lbl">Tus tarifas</span><div class="card"><div class="ln"><span>Visita y diagnóstico</span><b class="num">USD 15,00</b></div><div class="ln"><span>Hora de trabajo</span><b class="num">USD 12,00</b></div></div>
+ <div class="warn">Work-GO cobra una comisión del <b>15 %</b> por servicio completado, sin contar materiales. Registrarte es gratis.</div>
+ <div class="btns"><button class="btn nx" data-go="w-docs">Continuar</button></div>`,{nav:null,bell:false});
+X['w-docs']=()=>{const sent=S.tmp.sent;const it=[['user','Foto de perfil','Tu cara se ve clara'],['doc','Cédula (ambos lados)','09•• ••• 4471'],['shield','Certificado de antecedentes penales','Ministerio del Interior'],['check','Certificación SECAP (opcional)','Instalaciones eléctricas']];
+ return shell(`<div class="h1" style="font-size:24px">Tus documentos</div><p class="sub">El equipo de Work-GO los revisa antes de que puedas recibir solicitudes.</p>
+ <div class="col">${it.map(x=>`<div class="up"><span class="ic">${I(x[0],20)}</span><div><div style="font-weight:500;font-size:14px">${x[1]}</div><div class="rl" style="font-size:12px">${x[2]}</div></div><span class="st">${I('check',14,3)} Subido</span></div>`).join('')}</div>
+ ${sent?`<div class="warn" style="margin-top:14px"><b>En revisión.</b> Te avisaremos en 24 a 48 horas. Mientras tanto no puedes recibir solicitudes.</div><div class="btns"><button class="btn nx" data-act="approved">Simular: perfil aprobado</button></div>`:`<div class="btns"><button class="btn nx" data-act="send">Enviar a revisión</button></div>`}`,{back:'w-reg',nav:null,bell:false});};
+X['w-ok']=()=>{const w=W.jorge;return shell(`<div class="okbox row" style="gap:8px;margin-top:4px">${I('check',18,3)} <span><b>¡Tu perfil fue aprobado!</b> Ya puedes recibir solicitudes.</span></div>
+ <div class="row" style="margin-top:16px">${av(w.ini,w.c,'lg',true)}<div><div class="nm" style="font-size:20px">${w.n}</div><div class="rl">${w.of}</div><div class="chips" style="margin-top:6px"><span class="ver">${I('check',12,3)} Verificado</span><span class="ver">${I('check',12,3)} SECAP</span></div></div></div>
+ <div class="h2">Así te ven los clientes</div>
+ <div class="card"><div class="ln"><span>Zona</span><span>${w.zona}</span></div><div class="ln"><span>Visita y diagnóstico</span><b class="num">${money(w.vis)}</b></div><div class="ln"><span>Hora de trabajo</span><b class="num">${money(w.hr)}</b></div></div>
+ <div class="btns"><button class="btn nx" data-go="w-home">Ir a mis solicitudes</button></div>`,{nav:'me'});};
+X['w-home']=()=>{const on=S.tmp.avail!==false;return shell(`<div class="h1">Hola Jorge Luis!</div>
+ <button class="tog ${on?'on':''}" data-act="avail" style="margin-top:0"><span><b>${on?'Disponible':'No disponible'}</b><small>${on?'Recibes solicitudes en Norte y vía a la Costa.':'No recibirás solicitudes nuevas.'}</small></span><span class="sw"></span></button>
+ <div class="h2">Solicitud nueva</div>
+ ${on?`<div class="req"><div class="row" style="justify-content:space-between"><span class="badge u">${I('bolt',12)} Urgente</span><span class="rl">hace 1 min</span></div>
+ <div class="nm" style="margin-top:8px">Electricidad · Cortocircuito en alumbrado</div><div class="rl">Urb. Los Arrayanes · vía a la Costa km 14 · 3,1 km</div>
+ <div class="meta"><span>Cliente: Patricia V. ${stars(5,11)}</span><span class="price">Recargo urgencia + USD 10</span></div>
+ <div class="btns two" style="margin-top:12px"><button class="btn ghost sm" style="width:100%" data-act="reject">Rechazar</button><button class="btn sm nx" style="width:100%" data-go="w-req">Ver detalle</button></div></div>`:'<div class="card rl">Activa tu disponibilidad para recibir solicitudes.</div>'}
+ <div class="h2">Esta semana</div><div class="card row" style="justify-content:space-around;text-align:center"><div><div class="nm">6</div><div class="rl">servicios</div></div><div><div class="nm">4,8</div><div class="rl">calificación</div></div><div><div class="nm num">USD 214</div><div class="rl">ganado</div></div></div>`);};
+X['w-req']=()=>shell(`<div class="row" style="justify-content:space-between"><span class="badge u">${I('bolt',12)} Urgente · Sáb 21:12</span><span class="badge b">Asignación automática</span></div>
+ <div class="h1" style="font-size:24px;margin-top:10px">Cortocircuito en el alumbrado</div>
+ <p style="font-size:14px;line-height:1.45;margin:0 0 10px">El alumbrado de la entrada se apagó; la garita y el acceso quedaron a oscuras.</p>
+ <div class="row" style="gap:8px"><div class="thumb" style="background:linear-gradient(135deg,#3A4552,#151B22)">${I('photo',22)}</div><div class="thumb" style="background:linear-gradient(135deg,#55606C,#232A33)">${I('photo',22)}</div></div>
+ <div class="card" style="margin-top:12px"><div class="ln"><span>Lugar</span><span style="text-align:right">Urb. Los Arrayanes, entrada principal</span></div><div class="ln"><span>Distancia</span><span>3,1 km</span></div><div class="ln"><span>Cliente</span><span>Patricia Villacís ${stars(5,11)}</span></div><div class="ln"><span>Recargo por urgencia</span><b>USD 10,00</b></div></div>
+ <p class="note">${I('shield',14)} La dirección exacta se comparte cuando aceptas.</p>
+ <div class="btns two"><button class="btn ghost" data-act="reject">Rechazar</button><button class="btn nx" data-go="w-eta">Aceptar</button></div>`,{back:'w-home',nav:null});
+X['w-eta']=()=>{const e=S.tmp.eta||'30';return shell(`<div class="okbox row" style="gap:8px">${I('check',18,3)} Aceptaste el servicio WG-1061</div>
+ <div class="h1" style="font-size:24px;margin-top:14px">¿En cuánto llegas?</div><p class="sub">Le avisaremos a Patricia la hora aproximada.</p>
+ <div class="cats" style="grid-template-columns:repeat(2,1fr)">${['20','30','45','60'].map(m=>`<button class="btn ${e===m?'':'ghost'}" data-act="eta${m}">${m} min</button>`).join('')}</div>
+ <div class="card" style="margin-top:14px"><div class="ln"><span>Llegada aproximada</span><b>${{20:'21:35',30:'21:45',45:'22:00',60:'22:15'}[e]}</b></div><div class="ln"><span>Dirección</span><span style="text-align:right">Vía a la Costa km 14, garita principal</span></div></div>
+ <div class="btns"><button class="btn nx" data-go="w-start">Avisar y salir</button></div>`,{nav:null});};
+function codeIn(next,label){return `<div class="code" role="group" aria-label="Código">${[0,1,2,3].map(i=>`<input id="cd${i}" inputmode="numeric" maxlength="1" aria-label="Dígito ${i+1}" value="${S.tmp.fill?C().code[i]:''}">`).join('')}</div>
+ ${S.tmp.fill?`<div class="okbox row" style="gap:8px;justify-content:center">${I('check',16,3)} Código correcto · servicio WG-1061</div><div class="btns"><button class="btn nx" data-go="${next}">${label}</button></div>`:`<div class="btns"><button class="btn nx" data-act="fill">Ingresar código 3906</button></div>`}`;}
+X['w-start']=()=>shell(`<div class="h1" style="font-size:24px">Llegaste</div><p class="sub">Pide a la persona que te recibe el código del servicio. Así confirma que eres el técnico asignado.</p>
+ <div class="card center"><div class="nm">Código de inicio</div>${codeIn('w-quote','Iniciar y revisar el daño')}</div>`,{nav:null});
+X['w-quote']=()=>{const c=C();const sent=S.tmp.qs;return shell(`<div class="h1" style="font-size:24px">Enviar cotización</div><p class="sub">Revisaste el daño. Detalla el costo; el trabajo empieza cuando el cliente lo apruebe.</p>
+ <div class="card">${c.quote.map(q=>`<div class="ln"><span>${q[0]}</span><span class="num">${money(q[1])}</span></div>`).join('')}<div class="ln"><span>Recargo por urgencia</span><span class="num">${money(10)}</span></div><div class="ln tot"><span>Total</span><span class="num">${money(total(c))}</span></div></div>
+ <button class="chip" style="margin-top:8px">+ Agregar ítem</button> <button class="chip">${I('cam',13)} Foto del daño</button>
+ ${sent?`<div class="okbox row" style="gap:8px;margin-top:14px">${I('check',16,3)} Patricia aprobó la cotización. Puedes empezar.</div><div class="btns"><button class="btn nx" data-act="workdone">Terminé el trabajo</button></div>`:`<div class="btns"><button class="btn nx" data-act="qsend">Enviar a Patricia</button></div>`}`,{nav:null});};
+X['w-end']=()=>shell(`<div class="h1" style="font-size:24px">Cerrar el servicio</div><p class="sub">Cuando el cliente confirme que todo quedó bien, ingresa el mismo código para cerrar.</p>
+ <div class="card center"><div class="nm">Código de cierre</div>${codeIn('w-wallet','Cerrar servicio')}</div>`,{nav:null});
+X['w-wallet']=()=>{const c=C();const lab=45,urg=10,mat=16,com=(lab+urg)*.15,pas=+(mat*.0575).toFixed(2),rec=lab+urg+mat-com-pas;
+ return shell(`<div class="okbox row" style="gap:8px">${I('check',18,3)} Servicio WG-1061 cerrado y pagado</div>
+ <div class="wk" style="margin-top:12px"><div class="k">Saldo disponible</div><div class="v num">${money(214+rec)}</div><div class="k">Retiro a tu cuenta los martes y viernes</div></div>
+ <div class="h2">Detalle del servicio</div>
+ <div class="card"><div class="ln"><span>Mano de obra y diagnóstico</span><span class="num">${money(lab)}</span></div><div class="ln"><span>Recargo por urgencia</span><span class="num">${money(urg)}</span></div><div class="ln"><span>Materiales</span><span class="num">${money(mat)}</span></div>
+ <div class="ln"><span>Comisión Work-GO (15 %, sin materiales)</span><span class="num">−${money(com)}</span></div><div class="ln"><span>Pasarela sobre materiales</span><span class="num">−${money(pas)}</span></div><div class="ln tot"><span>Recibes</span><span class="num">${money(rec)}</span></div></div>
+ <div class="h2">Nueva reseña</div><div class="card"><div class="rev" style="border:0;padding:0"><div class="w"><span>Patricia V. · Urb. Los Arrayanes</span>${stars(5,12)}</div>Llegó a la hora que avisó y dejó el alumbrado funcionando esa misma noche.<div class="c">${I('check',12,3)} Servicio cerrado con código</div></div></div>`,{nav:'act'});};
+
+/* ---------- panel web ---------- */
+function adm(main,on){return `<div class="browser"><div class="bbar"><i></i><i></i><i></i><span class="url">admin.workgo.ec/${{"a-dash":"resumen","a-ver":"verificaciones","a-rec":"reclamos","a-inc":"incidentes","a-usr":"usuarios"}[on]}</span></div><div class="adm relative">
+ <nav class="side"><div class="wm">Work<i>Go</i> <span style="font-size:11px;font-weight:400;opacity:.7">Admin</span></div>
+ ${[['a-dash','Resumen',''],['a-ver','Verificaciones',S.tmp.approved?'2':'3'],['a-rec','Reclamos',S.tmp.resolved?'1':'2'],['a-inc','Incidentes','1'],['a-usr','Usuarios','']].map(x=>`<button class="${on===x[0]?'on':''} ${x[0]==='a-ver'&&on==='a-dash'?'nx':''}${x[0]==='a-rec'&&on==='a-ver'&&S.tmp.approved?' nx':''}" data-go="${x[0]}">${x[1]}${x[2]?`<span class="cnt">${x[2]}</span>`:''}</button>`).join('')}</nav>
+ <div class="main">${main}</div>${S.tmp.modal||''}</div></div>`;}
+X['a-dash']=()=>adm(`<h3>Resumen · domingo 8 nov</h3><p class="sub">Guayaquil · todas las zonas</p>
+ <div class="kpis"><div class="kpi"><div class="k">Servicios hoy</div><div class="v">48</div></div><div class="kpi"><div class="k">Cerrados con código</div><div class="v">41</div></div><div class="kpi al"><div class="k">Verificaciones pendientes</div><div class="v">${S.tmp.approved?2:3}</div></div><div class="kpi al"><div class="k">Reclamos abiertos</div><div class="v">${S.tmp.resolved?1:2}</div></div></div>
+ <table class="tbl"><thead><tr><th>Servicio</th><th>Categoría</th><th>Cliente</th><th>Trabajador</th><th>Estado</th><th class="num">Total</th></tr></thead><tbody>
+ ${[['WG-1061','Electricidad','Patricia Villacís','Jorge Luis Quimí','g','Cerrado',71],['WG-1060','Gasfitería','Nahim Ortega','Miguel Bajaña','b','En curso',38],['WG-1059','Limpieza','Daniela Ruiz','Diana Pincay','y','Por aceptar',25],['WG-1057','Cerrajería','Andrés Mora','Ana Torres','g','Cerrado',44],['WG-1042','Gasfitería','María F. Cedeño','Carlos Rojas','g','Cerrado',43.5]].map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td><td><span class="pill ${r[4]}">${r[5]}</span></td><td class="num">${money(r[6])}</td></tr>`).join('')}</tbody></table>`,'a-dash');
+X['a-ver']=()=>adm(`<h3>Verificaciones pendientes</h3><p class="sub">Ningún trabajador recibe solicitudes hasta que su identidad, antecedentes y contacto estén revisados.</p>
+ <table class="tbl"><thead><tr><th>Trabajador</th><th>Oficio</th><th>Zona</th><th>Documentos</th><th>Enviado</th><th>Estado</th></tr></thead><tbody>
+ ${(S.tmp.approved?'':`<tr class="click nx" data-go="a-verd"><td><b>Jorge Luis Quimí</b></td><td>Electricidad, Gasfitería</td><td>Norte, vía a la Costa</td><td>4 de 4</td><td>hace 5 h</td><td><span class="pill y">Por revisar</span></td></tr>`)+
+ `<tr class="click" data-go="a-verd"><td><b>Diana Pincay</b></td><td>Limpieza</td><td>Sur</td><td>3 de 3</td><td>hace 9 h</td><td><span class="pill y">Por revisar</span></td></tr><tr><td><b>Kevin Alvarado</b></td><td>Pintura</td><td>Centro</td><td>2 de 3</td><td>ayer</td><td><span class="pill r">Falta antecedentes</span></td></tr>`}</tbody></table>
+ ${S.tmp.approved?'<div class="okbox" style="margin-top:12px">Jorge Luis Quimí fue aprobado y ya puede recibir solicitudes.</div>':''}`,'a-ver');
+X['a-verd']=()=>adm(`<h3>Jorge Luis Quimí</h3><p class="sub">Electricista y gasfitero · Bastión Popular · 099 •••• 312 · registrado hace 5 h</p>
+ <div class="g2"><div class="box"><h4>Documentos</h4><div class="g2" style="gap:8px"><div class="doc" style="background:linear-gradient(135deg,#3F6E9E,#1F3E60)">Cédula · anverso<br>09•• ••• 4471</div><div class="doc" style="background:linear-gradient(135deg,#4F7EAE,#284C72)">Cédula · reverso</div><div class="doc" style="background:linear-gradient(135deg,#6B7686,#3A4350)">Certificado de antecedentes penales<br>Ministerio del Interior</div><div class="doc" style="background:linear-gradient(135deg,#B07A10,#7A5200)">Certificación SECAP<br>Instalaciones eléctricas</div></div></div>
+ <div class="box"><h4>Lista de revisión</h4>${['La foto coincide con la cédula','Cédula vigente','Certificado sin antecedentes registrados','Celular confirmado por SMS','Certificación SECAP válida','Tarifas dentro del rango del oficio'].map(t=>`<div class="chk"><span class="b">${I('check',13,3)}</span>${t}</div>`).join('')}
+ <label class="lbl" for="ad-n">Nota interna</label><textarea id="ad-n" class="inp" rows="2">Documentos legibles y vigentes.</textarea>
+ <div class="row" style="margin-top:12px;gap:8px"><button class="abtn g nx" data-act="aprobar">Aprobar trabajador</button><button class="abtn r">Rechazar</button><button class="abtn w">Pedir corrección</button></div></div></div>`,'a-ver');
+X['a-rec']=()=>adm(`<h3>Reclamos</h3><p class="sub">Se revisan las evidencias de ambas partes antes de decidir.</p>
+ <table class="tbl"><thead><tr><th>Reclamo</th><th>Servicio</th><th>Motivo</th><th>Cliente</th><th>Trabajador</th><th>Estado</th></tr></thead><tbody>
+ <tr class="click nx" data-go="a-recd"><td><b>R-208</b></td><td>WG-0987 · Pintura</td><td>Trabajo deficiente</td><td>Gabriel Cedeño</td><td>Fabricio León</td><td>${S.tmp.resolved?'<span class="pill g">Resuelto</span>':'<span class="pill y">En revisión</span>'}</td></tr>
+ <tr><td><b>R-206</b></td><td>WG-0951 · Gasfitería</td><td>No llegó</td><td>Karla Mite</td><td>Luis Mendoza</td><td><span class="pill y">Esperando respuesta</span></td></tr>
+ <tr><td><b>R-201</b></td><td>WG-0902 · Cerrajería</td><td>Cobro distinto</td><td>Óscar Vera</td><td>René Villao</td><td><span class="pill g">Resuelto</span></td></tr></tbody></table>`,'a-rec');
+X['a-recd']=()=>adm(`<h3>Reclamo R-208 · Trabajo deficiente</h3><p class="sub">Servicio WG-0987 · Pintura de sala · cotización aprobada USD 120,00 · pagado con tarjeta</p>
+ <div class="g2"><div class="box"><h4>Cliente · Gabriel Cedeño</h4><p style="font-size:13px;line-height:1.45;margin:0 0 10px">“La pared del fondo quedó con manchas y faltó la segunda mano en una esquina.”</p><div class="g2" style="gap:8px"><div class="doc" style="background:linear-gradient(135deg,#9A8F7A,#5E5546);height:90px">Foto 1 · manchas</div><div class="doc" style="background:linear-gradient(135deg,#8E8A80,#4E4A42);height:90px">Foto 2 · esquina</div></div></div>
+ <div class="box"><h4>Trabajador · Fabricio León</h4><p style="font-size:13px;line-height:1.45;margin:0 0 10px">“El cliente cambió de color a mitad del trabajo y no alcanzó la pintura para la segunda mano.”</p><div class="doc" style="background:linear-gradient(135deg,#7E8C9A,#46525F);height:90px">Foto · pintura usada</div></div></div>
+ <div class="box" style="margin-top:14px"><h4>Registro del servicio</h4><div class="row" style="gap:24px;font-size:13px;flex-wrap:wrap"><span>Código de inicio · 10:02</span><span>Cotización aprobada · 10:20</span><span>Código de cierre · 15:40</span><span>Reclamo · 18:05</span></div></div>
+ <div class="box" style="margin-top:14px"><h4>Decisión</h4><div class="row" style="gap:8px;flex-wrap:wrap"><button class="abtn nx" data-act="reemb">Reembolso parcial USD 30</button><button class="abtn w">Pedir corrección sin costo</button><button class="abtn w">Reasignar</button><button class="abtn r">Suspender trabajador</button></div></div>`,'a-rec');
+X['a-inc']=()=>adm(`<h3>Incidentes</h3><p class="sub">Reportes de seguridad, comportamiento o fraude.</p><table class="tbl"><thead><tr><th>Incidente</th><th>Tipo</th><th>Reportado por</th><th>Estado</th></tr></thead><tbody><tr><td>I-031</td><td>Pidió pago fuera de la aplicación</td><td>Cliente · WG-1012</td><td><span class="pill y">En revisión</span></td></tr></tbody></table>`,'a-inc');
+X['a-usr']=()=>adm(`<h3>Usuarios</h3><p class="sub">1 284 clientes · 196 trabajadores verificados · 7 suspendidos</p>`,'a-usr');
+
+/* ---------- motor ---------- */
+const START={cliente:'c-login',familiar:'c-login',urbanizacion:'c-login',trabajador:'w-reg',panel:'a-dash'};
+function toast(msg){const s=document.querySelector('.screen')||document.querySelector('.adm');if(!s)return;const t=document.createElement('div');t.className='toast';t.innerHTML=I('bell',18)+'<span>'+msg+'</span>';s.appendChild(t);timers.push(setTimeout(()=>t.remove(),2600));}
+function go(id){timers.forEach(clearTimeout);timers=[];S.scr=id;render();
+ const c=C();
+ if(id==='c-wait')timers.push(setTimeout(()=>{S.tmp.st=1;go('c-status');setTimeout(()=>toast((cw().n.split(' ')[0])+' aceptó. Llega aprox. a las '+cw().eta+'.'),50)},2200));
+ if(id==='c-auto'&&!S.tmp.autoDone)timers.push(setTimeout(()=>{S.tmp.autoDone=1;S.tmp.st=1;render();},2400));
+ if(id==='w-home'&&S.tmp.avail!==false)timers.push(setTimeout(()=>toast('Nueva solicitud urgente en vía a la Costa'),500));
+}
+function setSc(sc){S={sc,scr:START[sc],tmp:{}};try{history.replaceState(null,'','#'+sc)}catch(e){}go(START[sc]);}
+function render(){
+ const c=C();
+ document.getElementById('tabs').innerHTML=ORDER.map(k=>`<button aria-pressed="${k===S.sc}" data-sc="${k}">${SC[k].tab}</button>`).join('');
+ const ids=c.steps.map(s=>s[0]);let cur=ids.indexOf(S.scr);
+ if(cur<0){const map={'c-login':-1,'c-report':-2,'c-act':-2,'c-me':-2};cur=map[S.scr]??-1;if(S.scr==='c-rcpt'&&cur<0)cur=ids.length;}
+ if(cur>-1)S.tmp.maxStep=Math.max(S.tmp.maxStep||0,cur);
+ document.getElementById('guide').innerHTML=`<div class="role">${c.role}</div><h2>${c.title}</h2><p class="sc">${c.story}</p>
+ <ol class="steps">${c.steps.map((s,i)=>`<li class="${i===cur?'cur':(i<=(S.tmp.maxStep??-1)?'done':'')}"><button data-go="${s[0]}"><span class="n">${i<(S.tmp.maxStep??-1)&&i!==cur?I('check',12,3):i+1}</span><span>${s[1]}</span></button></li>`).join('')}</ol>
+ <div class="feat"><b>Funcionalidades de la Tabla 7:</b> ${c.feats}</div>
+ <div class="gbtns"><button data-sc="${S.sc}">Reiniciar escenario</button><label><input type="checkbox" id="hint" ${hints?'checked':''}> Resaltar siguiente acción</label></div>`;
+ const dev=document.getElementById('dev');
+ if(S.sc==='panel'){dev.innerHTML=`<div class="bwrap ${hints?'hints':''}">${X[S.scr]()}</div>`;}
+ else{const y=document.getElementById('appbody')?.scrollTop||0;const same=dev.dataset.scr===S.scr;dev.innerHTML=`<div class="phone"><div class="screen ${hints?'hints':''}">${X[S.scr]()}</div></div>`;if(same){const b=document.getElementById('appbody');if(b)b.scrollTop=y;}}
+ dev.dataset.scr=S.scr;
+}
+document.addEventListener('change',e=>{if(e.target.id==='hint'){hints=e.target.checked;render();}});
+document.addEventListener('click',e=>{
+ const t=e.target.closest('[data-sc],[data-go],[data-act]');if(!t)return;
+ if(t.dataset.sc){setSc(t.dataset.sc);return;}
+ const c=C();
+ if(t.dataset.cat){const cat=t.dataset.cat;if(cat!==c.cat){toast('En este escenario la solicitud es de '+c.cat+'.');return;}}
+ if(t.dataset.urg){S.tmp.urgent=true;S.tmp.mode='auto';}
+ if(t.dataset.w)S.tmp.pick=t.dataset.w;
+ if(t.dataset.go){if(t.dataset.go==='c-form'&&!t.dataset.urg&&S.tmp.urgent===undefined){}go(t.dataset.go);return;}
+ const a=t.dataset.act,T=S.tmp;
+ const acts={
+  other0(){T.other=false},other1(){T.other=true},'when-now'(){T.when='now'},'when-prog'(){T.when='prog'},
+  urg(){T.urgent=!T.urgent;if(T.urgent)T.mode='auto'},'mode-manual'(){T.mode='manual'},'mode-auto'(){T.mode='auto'},
+  submit(){if(c.other&&!T.other){toast('Cambia a “Otra dirección”: el servicio es para '+(c.recv||'otra dirección')+'.');return 1}go(T.mode==='auto'?'c-auto':'c-list');return 1},
+  arrive(){T.st=2;go('c-quote');toast(cw().n.split(' ')[0]+' llegó y confirmó el inicio con tu código.');return 1},
+  send(){T.sent=1;if(S.sc!=='trabajador')toast('Datos y código enviados.')},
+  approve(){go('c-close');toast('Cotización aprobada. El trabajo comenzó.');return 1},
+  'pm-card'(){T.pm='card'},'pm-cash'(){T.pm='cash'},
+  pay(){go(c.rate?'c-rate':'c-rcpt');if(!c.rate)toast('Pago realizado: '+money(total(c)));return 1},
+  pdf(){toast('Comprobante '+c.id+' descargado.')},pdf2(){toast('Reporte de noviembre exportado para la directiva.')},
+  reportsend(){toast('Reclamo enviado. Te responderemos en menos de 24 horas.')},
+  approved(){go('w-ok');return 1},avail(){T.avail=T.avail===false?true:false},
+  reject(){toast('Solicitud rechazada. Se ofrecerá a otro trabajador.')},
+  eta20(){T.eta='20'},eta30(){T.eta='30'},eta45(){T.eta='45'},eta60(){T.eta='60'},
+  fill(){T.fill=1},qsend(){T.qs=1;toast('Patricia aprobó la cotización.')},workdone(){T.fill=0;go('w-end');return 1},
+  aprobar(){T.approved=1;go('a-ver');return 1},
+  reemb(){T.modal=`<div class="modal"><div class="m"><h4 style="margin:0 0 8px">Confirmar reembolso parcial</h4><p class="sub" style="margin:0 0 14px">Se devolverán USD 30,00 a Gabriel Cedeño y se descontarán del saldo de Fabricio León. Ambos recibirán la decisión.</p><div class="row" style="gap:8px;justify-content:flex-end"><button class="abtn w" data-act="mclose">Cancelar</button><button class="abtn g nx" data-act="mok">Confirmar</button></div></div></div>`},
+  mclose(){T.modal=''},mok(){T.modal='';T.resolved=1;go('a-rec');return 1}
+ };
+ if(a&&a[0]==='r'&&/^r\d$/.test(a)){T.r=+a[1];render();return;}
+ if(acts[a]){const done=acts[a]();if(!done)render();}
+});
+window.addEventListener('hashchange',()=>{const h=location.hash.slice(1);if(SC[h]&&h!==S.sc)setSc(h);});
+const h=location.hash.slice(1);setSc(SC[h]?h:'cliente');
+})();
+</script>
+</body>
+</html>
